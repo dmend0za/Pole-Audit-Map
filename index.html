@@ -334,14 +334,21 @@
                 bearing: 0
             });
 
-            map.on('load', async () => {
-                await loadPoleDataFromFile(); // Load data from GeoJSON file first
-                hideLoading();
-                setupMapLayers();
-                setupMapEvents();
-                loadPoleData();
-                startDataRefresh();
-            });
+          map.on('load', async () => {
+    try {
+        await loadPoleDataFromFile(); // Load data from GeoJSON file first
+    } catch (error) {
+        console.error('Failed to load pole data, using fallback:', error);
+        // Set fallback empty data so map can still initialize
+        currentPoleData = {"type":"FeatureCollection", "features": []};
+    }
+    
+    hideLoading();
+    setupMapLayers();
+    setupMapEvents();
+    loadPoleData();
+    startDataRefresh();
+});
 
             // Add navigation controls
             map.addControl(new mapboxgl.NavigationControl(), 'bottom-left');
