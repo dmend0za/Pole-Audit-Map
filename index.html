@@ -316,6 +316,7 @@
             'TRUSSED': true,
             'Restorable Reject': true,
             'Non Restorable Reject': true,
+            'Priority Non Restorable Reject': true,
             'REPLACED': true,
             'Pending': true
         };
@@ -436,9 +437,14 @@
             legend.className = 'pole-legend';
             legend.innerHTML = `
                 <div class="legend-title">Pole Status</div>
-                <div class="legend-item" data-status="TRUSSED" onclick="toggleStatus('TRUSSED')">
-                    <div class="legend-color" style="background-color: #3498db;"></div>
-                    <span>TRUSSED</span>
+                <div class="legend-item" data-status="Priority Non Restorable Reject" onclick="toggleStatus('Priority Non Restorable Reject')">
+                    <div class="legend-color" style="background-color: #6f42c1;"></div>
+                    <span>Priority Non Restorable</span>
+                    <div class="legend-toggle"></div>
+                </div>
+                <div class="legend-item" data-status="Non Restorable Reject" onclick="toggleStatus('Non Restorable Reject')">
+                    <div class="legend-color" style="background-color: #e74c3c;"></div>
+                    <span>Non Restorable</span>
                     <div class="legend-toggle"></div>
                 </div>
                 <div class="legend-item" data-status="Restorable Reject" onclick="toggleStatus('Restorable Reject')">
@@ -446,9 +452,9 @@
                     <span>Restorable Reject</span>
                     <div class="legend-toggle"></div>
                 </div>
-                <div class="legend-item" data-status="Non Restorable Reject" onclick="toggleStatus('Non Restorable Reject')">
-                    <div class="legend-color" style="background-color: #e74c3c;"></div>
-                    <span>Non Restorable</span>
+                <div class="legend-item" data-status="TRUSSED" onclick="toggleStatus('TRUSSED')">
+                    <div class="legend-color" style="background-color: #3498db;"></div>
+                    <span>TRUSSED</span>
                     <div class="legend-toggle"></div>
                 </div>
                 <div class="legend-item" data-status="REPLACED" onclick="toggleStatus('REPLACED')">
@@ -685,10 +691,11 @@
                     paint: {
                         'circle-color': [
                             'case',
-                            ['==', ['get', 'extractedStatus'], 'TRUSSED'], '#3498db',
-                            ['==', ['get', 'extractedStatus'], 'Restorable Reject'], '#f39c12',
-                            ['==', ['get', 'extractedStatus'], 'Non Restorable Reject'], '#e74c3c',
-                            ['==', ['get', 'extractedStatus'], 'REPLACED'], '#95a5a6',
+                            ['==', ['get', 'extractedStatus'], 'Priority Non Restorable Reject'], '#6f42c1', // Indigo for highest priority
+                            ['==', ['get', 'extractedStatus'], 'Non Restorable Reject'], '#e74c3c', // Red for critical
+                            ['==', ['get', 'extractedStatus'], 'Restorable Reject'], '#f39c12', // Orange for maintenance needed
+                            ['==', ['get', 'extractedStatus'], 'TRUSSED'], '#3498db', // Blue for reinforced
+                            ['==', ['get', 'extractedStatus'], 'REPLACED'], '#95a5a6', // Gray for completed
                             '#2ecc71' // Default green for pending
                         ],
                         'circle-radius': 8,
