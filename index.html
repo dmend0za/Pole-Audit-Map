@@ -286,97 +286,26 @@
             defaultZoom: 12
         };
 
-        // Sample pole data - Replace with your actual KMZ converted to GeoJSON
-        const samplePoleData = {
-            "type": "FeatureCollection",
-            "features": [
-                {
-                    "type": "Feature",
-                    "properties": {
-                        "Pole_ID": "P001",
-                        "Length": "35",
-                        "Class": "1",
-                        "Year_Manufactured": "2018",
-                        "Structure": "Wood",
-                        "Group": "Distribution",
-                        "URL": "https://form.fillout.com/t/qwmp3Zdh2fus?Pole_ID=P001&Length=35&Class=1&Year_Manu=2018&Status=Pending",
-                        "status": "Pending"
-                    },
-                    "geometry": {
-                        "type": "Point",
-                        "coordinates": [-78.6569, 35.7896]
-                    }
-                },
-                {
-                    "type": "Feature",
-                    "properties": {
-                        "Pole_ID": "P002",
-                        "Length": "45",
-                        "Class": "2",
-                        "Year_Manufactured": "2020",
-                        "Structure": "Steel",
-                        "Group": "Transmission",
-                        "URL": "https://form.fillout.com/t/qwmp3Zdh2fus?Pole_ID=P002&Length=45&Class=2&Year_Manu=2020&Status=Pending",
-                        "status": "Pending"
-                    },
-                    "geometry": {
-                        "type": "Point",
-                        "coordinates": [-78.6469, 35.7696]
-                    }
-                },
-                {
-                    "type": "Feature",
-                    "properties": {
-                        "Pole_ID": "P003",
-                        "Length": "25",
-                        "Class": "3",
-                        "Year_Manufactured": "2019",
-                        "Structure": "Aluminum",
-                        "Group": "Street Light",
-                        "URL": "https://form.fillout.com/t/qwmp3Zdh2fus?Pole_ID=P003&Length=25&Class=3&Year_Manu=2019&Status=Complete",
-                        "status": "Complete"
-                    },
-                    "geometry": {
-                        "type": "Point",
-                        "coordinates": [-78.6669, 35.7596]
-                    }
-                },
-                {
-                    "type": "Feature",
-                    "properties": {
-                        "Pole_ID": "P004",
-                        "Length": "30",
-                        "Class": "1",
-                        "Year_Manufactured": "2021",
-                        "Structure": "Fiberglass",
-                        "Group": "Communication",
-                        "URL": "https://form.fillout.com/t/qwmp3Zdh2fus?Pole_ID=P004&Length=30&Class=1&Year_Manu=2021&Status=Pending",
-                        "status": "Pending"
-                    },
-                    "geometry": {
-                        "type": "Point",
-                        "coordinates": [-78.6369, 35.7796]
-                    }
-                },
-                {
-                    "type": "Feature",
-                    "properties": {
-                        "Pole_ID": "P005",
-                        "Length": "40",
-                        "Class": "2",
-                        "Year_Manufactured": "2017",
-                        "Structure": "Concrete",
-                        "Group": "Multi-Purpose",
-                        "URL": "https://form.fillout.com/t/qwmp3Zdh2fus?Pole_ID=P005&Length=40&Class=2&Year_Manu=2017&Status=Pending",
-                        "status": "Pending"
-                    },
-                    "geometry": {
-                        "type": "Point",
-                        "coordinates": [-78.6769, 35.7996]
-                    }
+  // Pole data will be loaded from GeoJSON file
+        let currentPoleData = null;
+
+        // Load pole data from OsmoseRejectsMerge.geojson file
+        async function loadPoleDataFromFile() {
+            try {
+                updateStatusIndicator('📡 Loading pole data from OsmoseRejects file');
+                const response = await fetch('./OsmoseRejectsMerge.geojson');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-            ]
-        };
+                currentPoleData = await response.json();
+                console.log(`✅ Loaded ${currentPoleData.features.length} poles from OsmoseRejectsMerge.geojson`);
+                updateStatusIndicator(`📊 Loaded ${currentPoleData.features.length} utility poles`);
+            } catch (error) {
+                console.error('❌ Error loading pole data:', error);
+                updateStatusIndicator('⚠️ Error loading OsmoseRejectsMerge.geojson - check file exists');
+                currentPoleData = {"type":"FeatureCollection", "features": []};
+            }
+        }
 
         // Status-based color mapping (based on your actual Status field)
         const statusColors = {
@@ -391,7 +320,6 @@
         let map;
         let userLocationMarker;
         let isTrackingLocation = false;
-        let currentPoleData = samplePoleData;
 
         // Initialize map
         function initializeMap() {
