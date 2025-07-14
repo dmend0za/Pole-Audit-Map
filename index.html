@@ -522,6 +522,9 @@
         function extractPoleData(pole) {
             const props = pole.properties;
             
+            console.log('Extracting data for pole:', props.name || 'unknown');
+            console.log('Full properties:', props);
+            
             // Extract from HTML description if available
             let htmlString = '';
             if (props.description && typeof props.description === 'object') {
@@ -533,16 +536,19 @@
             let data = {};
             
             if (htmlString) {
+                console.log('Parsing HTML description for pole:', props.name);
                 // Parse HTML table data
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(htmlString, 'text/html');
                 const rows = doc.querySelectorAll('tr');
                 
-                rows.forEach(row => {
+                rows.forEach((row, index) => {
                     const cells = row.querySelectorAll('td');
                     if (cells.length === 2) {
                         const key = cells[0].textContent.trim();
                         const value = cells[1].textContent.trim();
+                        
+                        console.log(`Row ${index}: ${key} = ${value}`);
                         
                         switch(key) {
                             case 'Pole_Number':
@@ -567,9 +573,43 @@
                                 data.status = value;
                                 break;
                             case 'URL':
+                                console.log('Processing URL row...');
+                                // Try multiple methods to extract the URL
+                                
+                                // Method 1: Check for link element
                                 const linkElement = cells[1].querySelector('a');
                                 if (linkElement) {
-                                    data.link = linkElement.getAttribute('href').replace(/&amp;/g, '&');
+                                    let href = linkElement.getAttribute('href');
+                                    console.log('Found href attribute:', href);
+                                    if (href) {
+                                        href = href.replace(/&amp;/g, '&');
+                                        data.link = href;
+                                        console.log('Extracted link from href:', href);
+                                    }
+                                }
+                                
+                                // Method 2: Check cell text content
+                                if (!data.link) {
+                                    let cellText = cells[1].textContent.trim();
+                                    console.log('Checking cell text:', cellText);
+                                    if (cellText.includes('https://form.fillout.com')) {
+                                        cellText = cellText.replace(/&amp;/g, '&');
+                                        data.link = cellText;
+                                        console.log('Extracted link from text:', cellText);
+                                    }
+                                }
+                                
+                                // Method 3: Check innerHTML
+                                if (!data.link) {
+                                    const innerHTML = cells[1].innerHTML;
+                                    console.log('Checking innerHTML:', innerHTML);
+                                    const linkMatch = innerHTML.match(/href="([^"]*)"/);
+                                    if (linkMatch) {
+                                        let href = linkMatch[1];
+                                        href = href.replace(/&amp;/g, '&');
+                                        data.link = href;
+                                        console.log('Extracted link from innerHTML:', href);
+                                    }
                                 }
                                 break;
                         }
@@ -587,8 +627,11 @@
             data.status = data.status || props.Status;
             data.link = data.link || props.URL;
             
-            // Construct link if not available
-            if (!data.link && data.poleNumber && data.length && data.class && data.yearManufactured && data.status) {
+            console.log('Extracted data before link construction:', data);
+            
+            // Construct link if not available or convert to form URL
+            if (data.poleNumber && data.length && data.class && data.yearManufactured && data.status) {
+                // Use the correct form URL format you specified
                 const params = new URLSearchParams({
                     'Pole_ID': data.poleNumber,
                     'Length': data.length,
@@ -597,8 +640,18 @@
                     'Status': data.status
                 });
                 data.link = `${FILLOUT_FORM_BASE_URL}?${params.toString()}`;
+                console.log('Constructed form link:', data.link);
+            } else {
+                console.log('Missing data for link construction:', {
+                    poleNumber: data.poleNumber,
+                    length: data.length,
+                    class: data.class,
+                    yearManufactured: data.yearManufactured,
+                    status: data.status
+                });
             }
             
+            console.log('Final extracted data:', data);
             return data;
         }
 
@@ -836,6 +889,8 @@
 
         // Start assessment with pole ID
         function startAssessmentWithId(poleId) {
+            console.log('startAssessmentWithId called with:', poleId);
+            
             const dataKey = `poleData_${poleId}`;
             let poleData = window[dataKey];
             
@@ -843,15 +898,24 @@
                 poleData = window.currentPoleData;
             }
             
+            console.log('Found pole data:', poleData);
+            
             if (!poleData) {
                 showError('No pole data available. Please close and reopen the marker popup.');
                 return;
             }
             
             const assessmentLink = poleData.link;
+            console.log('Assessment link to open:', assessmentLink);
             
-            if (!assessmentLink || !assessmentLink.startsWith('https://form.fillout.com')) {
-                showError('Unable to generate assessment link for this pole.');
+            if (!assessmentLink) {
+                showError('No assessment link available for this pole. Please check the pole data.');
+                return;
+            }
+            
+            // Validate the link format (should be form URL)
+            if (!assessmentLink.includes('form.fillout.com')) {
+                showError('Invalid assessment link format. Expected FillOut form URL.');
                 return;
             }
             
@@ -861,8 +925,11 @@
             }
             
             try {
+                console.log('Opening assessment link:', assessmentLink);
                 window.open(assessmentLink, '_blank');
+                showInfo('Assessment form opened in new tab');
             } catch (error) {
+                console.error('Error opening assessment form:', error);
                 showError('Error opening assessment form: ' + error.message);
             }
         }
