@@ -171,7 +171,7 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.15);
             font-size: 13px;
             z-index: 1000;
-            min-width: 160px;
+            min-width: 180px;
         }
         
         .legend-title {
@@ -189,6 +189,14 @@
             align-items: center;
             margin-bottom: 6px;
             font-weight: 500;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+        
+        .legend-item:hover {
+            background-color: rgba(0, 123, 191, 0.1);
         }
         
         .legend-item:last-child {
@@ -202,11 +210,77 @@
             border: 2px solid #fff;
             margin-right: 8px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            transition: opacity 0.2s ease;
         }
         
         .legend-item span {
             color: #333;
             font-size: 13px;
+            flex: 1;
+        }
+        
+        .legend-toggle {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #007cbf;
+            border-radius: 3px;
+            background: #007cbf;
+            position: relative;
+            margin-left: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .legend-toggle:after {
+            content: '✓';
+            position: absolute;
+            top: -2px;
+            left: 1px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .legend-item.disabled .legend-color {
+            opacity: 0.3;
+        }
+        
+        .legend-item.disabled span {
+            color: #999;
+            text-decoration: line-through;
+        }
+        
+        .legend-item.disabled .legend-toggle {
+            background: transparent;
+            border-color: #ccc;
+        }
+        
+        .legend-item.disabled .legend-toggle:after {
+            display: none;
+        }
+        
+        .legend-controls {
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            gap: 5px;
+        }
+        
+        .legend-control-btn {
+            flex: 1;
+            padding: 4px 8px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+        
+        .legend-control-btn:hover {
+            background: #e9ecef;
         }
     </style>
 </head>
@@ -236,6 +310,15 @@
         let statusCheckInterval = null;
         let userLocationMarker = null;
         let watchId = null;
+        
+        // Visibility state for different pole status groups
+        let statusVisibility = {
+            'TRUSSED': true,
+            'Restorable Reject': true,
+            'Non Restorable Reject': true,
+            'REPLACED': true,
+            'Pending': true
+        };
 
         // Initialize map
         function initializeMap() {
@@ -353,29 +436,43 @@
             legend.className = 'pole-legend';
             legend.innerHTML = `
                 <div class="legend-title">Pole Status</div>
-                <div class="legend-item">
+                <div class="legend-item" data-status="TRUSSED" onclick="toggleStatus('TRUSSED')">
                     <div class="legend-color" style="background-color: #3498db;"></div>
                     <span>TRUSSED</span>
+                    <div class="legend-toggle"></div>
                 </div>
-                <div class="legend-item">
+                <div class="legend-item" data-status="Restorable Reject" onclick="toggleStatus('Restorable Reject')">
                     <div class="legend-color" style="background-color: #f39c12;"></div>
                     <span>Restorable Reject</span>
+                    <div class="legend-toggle"></div>
                 </div>
-                <div class="legend-item">
+                <div class="legend-item" data-status="Non Restorable Reject" onclick="toggleStatus('Non Restorable Reject')">
                     <div class="legend-color" style="background-color: #e74c3c;"></div>
                     <span>Non Restorable</span>
+                    <div class="legend-toggle"></div>
                 </div>
-                <div class="legend-item">
+                <div class="legend-item" data-status="REPLACED" onclick="toggleStatus('REPLACED')">
                     <div class="legend-color" style="background-color: #95a5a6;"></div>
                     <span>REPLACED</span>
+                    <div class="legend-toggle"></div>
                 </div>
-                <div class="legend-item">
+                <div class="legend-item" data-status="Pending" onclick="toggleStatus('Pending')">
                     <div class="legend-color" style="background-color: #2ecc71;"></div>
                     <span>Pending Assessment</span>
+                    <div class="legend-toggle"></div>
+                </div>
+                <div class="legend-controls">
+                    <div class="legend-control-btn" onclick="showAllStatuses()">Show All</div>
+                    <div class="legend-control-btn" onclick="hideAllStatuses()">Hide All</div>
                 </div>
             `;
             
             document.getElementById('map').appendChild(legend);
+            
+            // Make toggle functions globally available
+            window.toggleStatus = toggleStatus;
+            window.showAllStatuses = showAllStatuses;
+            window.hideAllStatuses = hideAllStatuses;
         }
 
         // Load pole data from GeoJSON
@@ -501,10 +598,16 @@
 
         // Add markers to map
         function addMarkersToMap() {
-            // Filter out completed poles
+            // Filter out completed poles and apply status visibility filters
             const pendingPoles = allPoles.filter(pole => {
                 const poleData = extractPoleData(pole);
-                return !completedPoleIds.has(poleData.poleNumber);
+                // Don't show completed poles
+                if (completedPoleIds.has(poleData.poleNumber)) {
+                    return false;
+                }
+                // Apply status visibility filter
+                const status = poleData.status || 'Pending';
+                return statusVisibility[status] !== false;
             }).map(pole => {
                 const poleData = extractPoleData(pole);
                 return {
@@ -619,6 +722,7 @@
             }
 
             setupClickHandlers();
+            updateVisiblePoleCount();
         }
 
         // Setup click handlers
@@ -847,8 +951,70 @@
             const pending = total - completed;
             
             document.getElementById('total-poles').textContent = `Total Poles: ${total}`;
-            document.getElementById('pending-poles').textContent = `Pending: ${pending}`;
             document.getElementById('completed-poles').textContent = `Completed: ${completed}`;
+            
+            // Update visible count
+            updateVisiblePoleCount();
+        }
+
+        // Toggle visibility for a specific status
+        function toggleStatus(status) {
+            statusVisibility[status] = !statusVisibility[status];
+            
+            // Update legend item appearance
+            const legendItem = document.querySelector(`[data-status="${status}"]`);
+            if (legendItem) {
+                if (statusVisibility[status]) {
+                    legendItem.classList.remove('disabled');
+                } else {
+                    legendItem.classList.add('disabled');
+                }
+            }
+            
+            // Refresh map markers
+            addMarkersToMap();
+            updateStats();
+        }
+        
+        // Show all status groups
+        function showAllStatuses() {
+            Object.keys(statusVisibility).forEach(status => {
+                statusVisibility[status] = true;
+                const legendItem = document.querySelector(`[data-status="${status}"]`);
+                if (legendItem) {
+                    legendItem.classList.remove('disabled');
+                }
+            });
+            addMarkersToMap();
+            updateStats();
+        }
+        
+        // Hide all status groups
+        function hideAllStatuses() {
+            Object.keys(statusVisibility).forEach(status => {
+                statusVisibility[status] = false;
+                const legendItem = document.querySelector(`[data-status="${status}"]`);
+                if (legendItem) {
+                    legendItem.classList.add('disabled');
+                }
+            });
+            addMarkersToMap();
+            updateStats();
+        }
+        
+        // Update count of visible poles
+        function updateVisiblePoleCount() {
+            const visibleCount = allPoles.filter(pole => {
+                const poleData = extractPoleData(pole);
+                if (completedPoleIds.has(poleData.poleNumber)) {
+                    return false;
+                }
+                const status = poleData.status || 'Pending';
+                return statusVisibility[status] !== false;
+            }).length;
+            
+            // Update the pending count to show visible poles
+            document.getElementById('pending-poles').textContent = `Visible: ${visibleCount}`;
         }
 
         // Refresh data
