@@ -321,38 +321,59 @@
         let userLocationMarker;
         let isTrackingLocation = false;
 
-        // Initialize map
-        function initializeMap() {
-            mapboxgl.accessToken = CONFIG.mapboxToken;
-            
-            map = new mapboxgl.Map({
-                container: 'map',
-                style: 'mapbox://styles/mapbox/satellite-streets-v12',
-                center: CONFIG.defaultCenter,
-                zoom: CONFIG.defaultZoom,
-                pitch: 0,
-                bearing: 0
-            });
-
-          map.on('load', async () => {
-    try {
-        await loadPoleDataFromFile(); // Load data from GeoJSON file first
-    } catch (error) {
-        console.error('Failed to load pole data, using fallback:', error);
-        // Set fallback empty data so map can still initialize
-        currentPoleData = {"type":"FeatureCollection", "features": []};
+ // Initialize map
+function initializeMap() {
+    mapboxgl.accessToken = CONFIG.mapboxToken;
+    
+    // Check WebGL support
+    if (!mapboxgl.supported()) {
+        alert('Your browser does not support Mapbox GL JS');
+        document.getElementById('loadingIndicator').innerHTML = '⚠️ Browser not supported';
+        return;
     }
     
-    hideLoading();
-    setupMapLayers();
-    setupMapEvents();
-    loadPoleData();
-    startDataRefresh();
-});
+    try {
+        map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/satellite-streets-v12',
+            center: CONFIG.defaultCenter,
+            zoom: CONFIG.defaultZoom,
+            pitch: 0,
+            bearing: 0,
+            // Add WebGL fallback options
+            failIfMajorPerformanceCaveat: false,
+            preserveDrawingBuffer: true
+        });
 
-            // Add navigation controls
-            map.addControl(new mapboxgl.NavigationControl(), 'bottom-left');
-        }
+        map.on('load', async () => {
+            try {
+                await loadPoleDataFromFile();
+            } catch (error) {
+                console.error('Failed to load pole data, using fallback:', error);
+                currentPoleData = {"type":"FeatureCollection", "features": []};
+            }
+            
+            hideLoading();
+            setupMapLayers();
+            setupMapEvents();
+            loadPoleData();
+            startDataRefresh();
+        });
+
+        map.on('error', (e) => {
+            console.error('Map error:', e);
+            document.getElementById('loadingIndicator').innerHTML = '⚠️ Map failed to load';
+        });
+
+    } catch (error) {
+        console.error('Failed to create map:', error);
+        document.getElementById('loadingIndicator').innerHTML = '⚠️ Failed to initialize map';
+        return;
+    }
+
+    // Add navigation controls
+    map.addControl(new mapboxgl.NavigationControl(), 'bottom-left');
+}
 
         function setupMapLayers() {
             // Add pole clusters
