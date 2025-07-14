@@ -313,10 +313,11 @@
         
         // Visibility state for different pole status groups
         let statusVisibility = {
-            'TRUSSED': true,
-            'Restorable Reject': true,
-            'Non Restorable Reject': true,
             'Priority Non Restorable Reject': true,
+            'Non Restorable Reject': true,
+            'Priority Restorable Reject': true,
+            'Restorable Reject': true,
+            'TRUSSED': true,
             'REPLACED': true,
             'Pending': true
         };
@@ -445,6 +446,11 @@
                 <div class="legend-item" data-status="Non Restorable Reject" onclick="toggleStatus('Non Restorable Reject')">
                     <div class="legend-color" style="background-color: #e74c3c;"></div>
                     <span>Non Restorable</span>
+                    <div class="legend-toggle"></div>
+                </div>
+                <div class="legend-item" data-status="Priority Restorable Reject" onclick="toggleStatus('Priority Restorable Reject')">
+                    <div class="legend-color" style="background-color: #8e44ad;"></div>
+                    <span>Priority Restorable</span>
                     <div class="legend-toggle"></div>
                 </div>
                 <div class="legend-item" data-status="Restorable Reject" onclick="toggleStatus('Restorable Reject')">
@@ -744,8 +750,9 @@
                     paint: {
                         'circle-color': [
                             'case',
-                            ['==', ['get', 'extractedStatus'], 'Priority Non Restorable Reject'], '#6f42c1', // Indigo for highest priority
+                            ['==', ['get', 'extractedStatus'], 'Priority Non Restorable Reject'], '#6f42c1', // Dark indigo for highest priority
                             ['==', ['get', 'extractedStatus'], 'Non Restorable Reject'], '#e74c3c', // Red for critical
+                            ['==', ['get', 'extractedStatus'], 'Priority Restorable Reject'], '#8e44ad', // Purple indigo for priority restorable
                             ['==', ['get', 'extractedStatus'], 'Restorable Reject'], '#f39c12', // Orange for maintenance needed
                             ['==', ['get', 'extractedStatus'], 'TRUSSED'], '#3498db', // Blue for reinforced
                             ['==', ['get', 'extractedStatus'], 'REPLACED'], '#95a5a6', // Gray for completed
@@ -937,9 +944,16 @@
         // Check Google Sheets for completed assessments
         async function checkCompletedAssessments() {
             try {
+                console.log('Checking for completed assessments...');
                 const response = await fetch(GOOGLE_SHEETS_CSV_URL);
                 
                 if (!response.ok) {
+                    console.log('Could not fetch spreadsheet data - likely permission issue. Status:', response.status);
+                    if (response.status === 302 || response.url.includes('accounts.google.com')) {
+                        console.log('Google Sheet appears to be private. Please make it publicly viewable.');
+                        // Don't show error to user for permission issues, just log it
+                        return;
+                    }
                     return;
                 }
                 
@@ -947,10 +961,15 @@
                 const lines = csvData.split('\n');
                 
                 if (lines.length < 2) {
+                    console.log('No data found in spreadsheet');
                     return;
                 }
                 
+                // Parse CSV headers
                 const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                console.log('Spreadsheet headers:', headers);
+                
+                // Find the relevant column indices
                 const poleIdIndex = headers.findIndex(h => 
                     h.toLowerCase().includes('pole') && h.toLowerCase().includes('id')
                 );
@@ -958,12 +977,18 @@
                     h.toLowerCase().includes('status')
                 );
                 
+                console.log('Pole ID column index:', poleIdIndex);
+                console.log('Status column index:', statusIndex);
+                
                 if (poleIdIndex === -1 || statusIndex === -1) {
+                    console.log('Required columns not found in spreadsheet');
                     return;
                 }
                 
+                // Create a new set of currently completed poles from the spreadsheet
                 const currentlyCompleted = new Set();
                 
+                // Check each row for completed status
                 for (let i = 1; i < lines.length; i++) {
                     const row = lines[i].split(',').map(cell => cell.trim().replace(/"/g, ''));
                     
@@ -971,24 +996,34 @@
                         const poleId = row[poleIdIndex];
                         const status = row[statusIndex];
                         
+                        console.log(`Row ${i}: Pole=${poleId}, Status=${status}`);
+                        
                         if (poleId && status && status.toLowerCase() === 'complete') {
                             currentlyCompleted.add(poleId);
                         }
                     }
                 }
                 
+                console.log('Currently completed poles from spreadsheet:', [...currentlyCompleted]);
+                console.log('Previously completed poles in memory:', [...completedPoleIds]);
+                
+                // Find newly completed poles
                 const newCompletions = [...currentlyCompleted].filter(pole => !completedPoleIds.has(pole));
+                
+                // Find poles that are no longer completed (status removed/changed)
                 const noLongerCompleted = [...completedPoleIds].filter(pole => !currentlyCompleted.has(pole));
                 
                 let mapNeedsUpdate = false;
                 
                 if (newCompletions.length > 0) {
+                    console.log('Found newly completed poles:', newCompletions);
                     newCompletions.forEach(pole => completedPoleIds.add(pole));
                     mapNeedsUpdate = true;
                     showInfo(`${newCompletions.length} assessment(s) completed! Markers removed.`);
                 }
                 
                 if (noLongerCompleted.length > 0) {
+                    console.log('Found poles no longer completed:', noLongerCompleted);
                     noLongerCompleted.forEach(pole => completedPoleIds.delete(pole));
                     mapNeedsUpdate = true;
                     showInfo(`${noLongerCompleted.length} pole(s) status changed. Markers restored.`);
@@ -1002,6 +1037,10 @@
                 
             } catch (error) {
                 console.error('Error checking completed assessments:', error);
+                // Only log the error, don't show it to users since it's likely a permission issue
+                if (error.message.includes('Failed to fetch')) {
+                    console.log('💡 TIP: Make sure your Google Sheet is publicly viewable (Anyone with link can view)');
+                }
             }
         }
 
