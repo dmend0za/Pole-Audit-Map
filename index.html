@@ -4,520 +4,639 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Utility Pole Assessment Map</title>
-    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
-    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css' rel='stylesheet' />
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: Arial, sans-serif;
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
+        #map { 
+            position: absolute; 
+            top: 0; 
+            bottom: 0; 
+            width: 100%; 
         }
-
-        #map {
-            width: 100vw;
-            height: 100vh;
+        .mapboxgl-popup-content {
+            padding: 15px;
+            max-width: 300px;
         }
-
-        .legend {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 12px;
-            padding: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            z-index: 1000;
-            min-width: 200px;
-        }
-
-        .legend h3 {
-            margin-bottom: 12px;
+        .popup-header {
+            font-weight: bold;
             font-size: 16px;
-            font-weight: 600;
+            margin-bottom: 10px;
             color: #333;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 8px;
         }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
+        .popup-info {
             margin-bottom: 8px;
             font-size: 14px;
         }
-
-        .legend-color {
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            margin-right: 10px;
-            border: 2px solid rgba(255, 255, 255, 0.8);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .status-indicator {
-            position: absolute;
-            top: 100px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 12px;
-            padding: 12px 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            z-index: 1000;
-            font-size: 14px;
+        .popup-label {
+            font-weight: bold;
             color: #666;
         }
-
-        .location-controls {
-            position: absolute;
-            bottom: 100px;
-            right: 20px;
-            z-index: 1000;
-        }
-
-        .location-btn {
-            background: rgba(255, 255, 255, 0.95);
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            transition: all 0.3s ease;
-        }
-
-        .location-btn:hover {
-            background: rgba(255, 255, 255, 1);
-            transform: scale(1.05);
-        }
-
-        .location-btn.active {
-            background: #007cbf;
+        .audit-button {
+            background-color: #007cbf;
             color: white;
-        }
-
-        .mapboxgl-popup-content {
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            max-width: 300px;
-        }
-
-        .popup-header {
-            font-weight: 600;
-            font-size: 16px;
-            color: #333;
-            margin-bottom: 12px;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 8px;
-        }
-
-        .popup-info {
-            margin-bottom: 16px;
-        }
-
-        .popup-info div {
-            margin-bottom: 6px;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
             font-size: 14px;
-            color: #555;
-        }
-
-        .popup-info strong {
-            color: #333;
-        }
-
-        .assess-btn {
-            background: linear-gradient(135deg, #007cbf, #0056b3);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
             width: 100%;
-            font-size: 14px;
-            transition: all 0.3s ease;
+            margin-top: 10px;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
         }
-
-        .assess-btn:hover {
-            background: linear-gradient(135deg, #0056b3, #004494);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 123, 191, 0.3);
+        .audit-button:hover {
+            background-color: #005a87;
         }
-
-        .cluster-count {
-            background: rgba(255, 255, 255, 0.9);
-            color: #333;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 12px;
-            border: 2px solid #007cbf;
-        }
-
-        @media (max-width: 768px) {
-            .legend {
-                top: 10px;
-                right: 10px;
-                left: 10px;
-                padding: 12px;
-                min-width: auto;
-            }
-
-            .status-indicator {
-                top: 80px;
-                right: 10px;
-                left: 10px;
-                text-align: center;
-            }
-
-            .location-controls {
-                bottom: 80px;
-                right: 10px;
-            }
-
-            .mapboxgl-popup-content {
-                max-width: 280px;
-                padding: 16px;
-            }
-        }
-
         .loading {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.9);
             padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            z-index: 2000;
-            display: flex;
-            align-items: center;
-            gap: 12px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-
-        .spinner {
+        .error {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #f5c6cb;
+            z-index: 1000;
+        }
+        .stats {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-size: 14px;
+            z-index: 1000;
+        }
+        .stats-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .refresh-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .refresh-button:hover {
+            background-color: #218838;
+        }
+        
+        /* User location marker styles */
+        .user-location-marker {
+            position: relative;
             width: 20px;
             height: 20px;
-            border: 2px solid #e0e0e0;
-            border-top: 2px solid #007cbf;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
         }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        
+        .user-location-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            background-color: #007cbf;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 2;
+        }
+        
+        .user-location-pulse {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            background-color: #007cbf;
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: pulse 2s infinite;
+            z-index: 1;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.3;
+            }
+            70% {
+                transform: translate(-50%, -50%) scale(2);
+                opacity: 0;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(2);
+                opacity: 0;
+            }
+        }
+        
+        /* Pole status legend styles */
+        .pole-legend {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            font-size: 13px;
+            z-index: 1000;
+            min-width: 160px;
+        }
+        
+        .legend-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 14px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 8px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            margin-right: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .legend-item span {
+            color: #333;
+            font-size: 13px;
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    
-    <div class="legend">
-        <h3>🔌 Pole Status</h3>
-        <div class="legend-item">
-            <div class="legend-color" style="background: #3498db;"></div>
-            <span>TRUSSED</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: #f39c12;"></div>
-            <span>Restorable Reject</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: #e74c3c;"></div>
-            <span>Non Restorable Reject</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: #95a5a6;"></div>
-            <span>REPLACED</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: #2ecc71;"></div>
-            <span>Pending Assessment</span>
-        </div>
+    <div id="loading" class="loading">Loading pole locations...</div>
+    <div id="error" class="error" style="display: none;"></div>
+    <div id="stats" class="stats">
+        <div class="stats-title">Assessment Progress</div>
+        <div id="total-poles">Total Poles: 0</div>
+        <div id="pending-poles">Pending: 0</div>
+        <div id="completed-poles">Completed: 0</div>
     </div>
-
-    <div class="status-indicator" id="statusIndicator">
-        📡 Monitoring spreadsheet...
-    </div>
-
-    <div class="location-controls">
-        <button class="location-btn" id="locationBtn" title="Find My Location">
-            📍
-        </button>
-    </div>
-
-    <div class="loading" id="loadingIndicator">
-        <div class="spinner"></div>
-        <span>Loading pole data...</span>
-    </div>
+    <button id="refresh-button" class="refresh-button" onclick="refreshData()">Refresh Data</button>
 
     <script>
         // Configuration
-        const CONFIG = {
-            mapboxToken: 'pk.eyJ1IjoiZmllbGRzZW5zZSIsImEiOiJjbWN4dW42eTcwZXJxMmxwdW41Y2JycjZ0In0.LpdOqXdOCP4TNamhlj8i-w',
-            filloutFormUrl: 'https://form.fillout.com/t/qwmp3Zdh2fus',
-            spreadsheetUrl: 'https://docs.google.com/spreadsheets/d/1KCReNtgnRafFIvnNE6XdrdgZFylxpTLJQ3wnmDNBJSg/export?format=csv',
-            refreshInterval: 30000, // 30 seconds
-            defaultCenter: [-78.6569, 35.7796], // Kenly, NC coordinates
-            defaultZoom: 12
-        };
+        const MAPBOX_TOKEN = 'pk.eyJ1IjoiZmllbGRzZW5zZSIsImEiOiJjbWN4dW42eTcwZXJxMmxwdW41Y2JycjZ0In0.LpdOqXdOCP4TNamhlj8i-w';
+        const FILLOUT_FORM_BASE_URL = 'https://form.fillout.com/t/qwmp3Zdh2fus';
+        const GEOJSON_URL = 'https://raw.githubusercontent.com/dmend0za/Pole-Audit-Map/main/OsmoseRejectsMerge.geojson';
+        const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/1KCReNtgnRafFIvnNE6XdrdgZFylxpTLJQ3wnmDNBJSg/export?format=csv';
+        
+        let map;
+        let allPoles = [];
+        let completedPoleIds = new Set();
+        let currentPopup = null;
+        let statusCheckInterval = null;
+        let userLocationMarker = null;
+        let watchId = null;
 
-  // Pole data will be loaded from GeoJSON file
-        let currentPoleData = null;
-
-        // Load pole data from OsmoseRejectsMerge.geojson file
-        async function loadPoleDataFromFile() {
+        // Initialize map
+        function initializeMap() {
             try {
-                updateStatusIndicator('📡 Loading pole data from OsmoseRejects file');
-                const response = await fetch('./OsmoseRejectsMerge.geojson');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                currentPoleData = await response.json();
-                console.log(`✅ Loaded ${currentPoleData.features.length} poles from OsmoseRejectsMerge.geojson`);
-                updateStatusIndicator(`📊 Loaded ${currentPoleData.features.length} utility poles`);
+                mapboxgl.accessToken = MAPBOX_TOKEN;
+                
+                map = new mapboxgl.Map({
+                    container: 'map',
+                    style: 'mapbox://styles/mapbox/satellite-streets-v12',
+                    center: [-77.90, 35.71], // Centered on your pole area
+                    zoom: 12,
+                    attributionControl: true
+                });
+
+                map.on('load', function () {
+                    document.getElementById('loading').style.display = 'none';
+                    loadPoleData();
+                    
+                    // Request user location after map loads
+                    requestUserLocation();
+                    
+                    // Add pole status legend after map loads
+                    addPoleStatusLegend();
+                });
+
+                map.on('error', function(e) {
+                    showError('Map failed to load: ' + e.error.message);
+                });
+
             } catch (error) {
-                console.error('❌ Error loading pole data:', error);
-                updateStatusIndicator('⚠️ Error loading OsmoseRejectsMerge.geojson - check file exists');
-                currentPoleData = {"type":"FeatureCollection", "features": []};
+                showError('Failed to initialize map: ' + error.message);
             }
         }
 
-        // Status-based color mapping (based on your actual Status field)
-        const statusColors = {
-            'TRUSSED': '#3498db',          // Blue - needs reinforcement
-            'REPLACED': '#95a5a6',         // Gray - already handled
-            'Restorable Reject': '#f39c12', // Orange - needs restoration
-            'Non Restorable Reject': '#e74c3c', // Red - critical
-            'Pending': '#2ecc71',          // Green - pending assessment
-            'Complete': '#27ae60'          // Dark green - assessment complete
-        };
+        // Request and track user location
+        function requestUserLocation() {
+            if (!navigator.geolocation) {
+                console.log('Geolocation is not supported by this browser');
+                return;
+            }
 
-        let map;
-        let userLocationMarker;
-        let isTrackingLocation = false;
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    updateUserLocationMarker(position.coords);
+                    watchUserLocation();
+                },
+                (error) => {
+                    console.error('Error getting location:', error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        }
 
- // Initialize map
-function initializeMap() {
-    mapboxgl.accessToken = CONFIG.mapboxToken;
-    
-    // Check WebGL support
-    if (!mapboxgl.supported()) {
-        alert('Your browser does not support Mapbox GL JS');
-        document.getElementById('loadingIndicator').innerHTML = '⚠️ Browser not supported';
-        return;
-    }
-    
-    try {
-        map = new mapboxgl.Map({
-            container: 'map',
-            style: 'mapbox://styles/mapbox/satellite-streets-v12',
-            center: CONFIG.defaultCenter,
-            zoom: CONFIG.defaultZoom,
-            pitch: 0,
-            bearing: 0,
-            // Add WebGL fallback options
-            failIfMajorPerformanceCaveat: false,
-            preserveDrawingBuffer: true
-        });
+        // Watch user location for continuous updates
+        function watchUserLocation() {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+            }
 
-        map.on('load', async () => {
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    updateUserLocationMarker(position.coords);
+                },
+                (error) => {
+                    console.error('Error watching location:', error);
+                },
+                {
+                    enableHighAccuracy: false,
+                    timeout: 30000,
+                    maximumAge: 300000
+                }
+            );
+        }
+
+        // Update or create user location marker
+        function updateUserLocationMarker(coords) {
+            const { latitude, longitude } = coords;
+            
+            if (userLocationMarker) {
+                userLocationMarker.remove();
+            }
+
+            const userLocationElement = document.createElement('div');
+            userLocationElement.className = 'user-location-marker';
+            userLocationElement.innerHTML = `
+                <div class="user-location-dot"></div>
+                <div class="user-location-pulse"></div>
+            `;
+
+            userLocationMarker = new mapboxgl.Marker({
+                element: userLocationElement,
+                anchor: 'center'
+            })
+            .setLngLat([longitude, latitude])
+            .addTo(map);
+
+            if (!map.hasUserCentered) {
+                map.flyTo({
+                    center: [longitude, latitude],
+                    zoom: 16,
+                    duration: 2000
+                });
+                map.hasUserCentered = true;
+            }
+        }
+
+        // Add pole status legend to the map
+        function addPoleStatusLegend() {
+            const legend = document.createElement('div');
+            legend.id = 'pole-legend';
+            legend.className = 'pole-legend';
+            legend.innerHTML = `
+                <div class="legend-title">Pole Status</div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #3498db;"></div>
+                    <span>TRUSSED</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #f39c12;"></div>
+                    <span>Restorable Reject</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #e74c3c;"></div>
+                    <span>Non Restorable</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #95a5a6;"></div>
+                    <span>REPLACED</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #2ecc71;"></div>
+                    <span>Pending Assessment</span>
+                </div>
+            `;
+            
+            document.getElementById('map').appendChild(legend);
+        }
+
+        // Load pole data from GeoJSON
+        async function loadPoleData() {
             try {
-                await loadPoleDataFromFile();
+                console.log('Loading pole data from:', GEOJSON_URL);
+                const response = await fetch(GEOJSON_URL);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Pole data loaded successfully:', data);
+                
+                if (!data.features || !Array.isArray(data.features)) {
+                    throw new Error('Invalid GeoJSON format: features array not found');
+                }
+                
+                allPoles = data.features;
+                console.log(`Loaded ${allPoles.length} poles`);
+                
+                // Check completed poles from localStorage
+                const stored = localStorage.getItem('completedPoles');
+                if (stored) {
+                    completedPoleIds = new Set(JSON.parse(stored));
+                    console.log(`Found ${completedPoleIds.size} completed poles in local storage`);
+                }
+                
+                addMarkersToMap();
+                updateStats();
+                startStatusChecking();
+                
             } catch (error) {
-                console.error('Failed to load pole data, using fallback:', error);
-                currentPoleData = {"type":"FeatureCollection", "features": []};
+                console.error('Error loading pole data:', error);
+                showError('Failed to load pole data: ' + error.message);
+            }
+        }
+
+        // Extract pole data from HTML description or properties
+        function extractPoleData(pole) {
+            const props = pole.properties;
+            
+            // Extract from HTML description if available
+            let htmlString = '';
+            if (props.description && typeof props.description === 'object') {
+                htmlString = props.description.value || props.description;
+            } else if (typeof props.description === 'string') {
+                htmlString = props.description;
+            }
+
+            let data = {};
+            
+            if (htmlString) {
+                // Parse HTML table data
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlString, 'text/html');
+                const rows = doc.querySelectorAll('tr');
+                
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length === 2) {
+                        const key = cells[0].textContent.trim();
+                        const value = cells[1].textContent.trim();
+                        
+                        switch(key) {
+                            case 'Pole_Number':
+                                data.poleNumber = value;
+                                break;
+                            case 'Length':
+                                data.length = value;
+                                break;
+                            case 'Class':
+                                data.class = value;
+                                break;
+                            case 'Year_Manufactured':
+                                data.yearManufactured = value;
+                                break;
+                            case 'Status':
+                                data.status = value;
+                                break;
+                            case 'URL':
+                                const linkElement = cells[1].querySelector('a');
+                                if (linkElement) {
+                                    data.link = linkElement.getAttribute('href').replace(/&amp;/g, '&');
+                                }
+                                break;
+                        }
+                    }
+                });
             }
             
-            hideLoading();
-            setupMapLayers();
-            setupMapEvents();
-            loadPoleData();
-            startDataRefresh();
-        });
-
-        map.on('error', (e) => {
-            console.error('Map error:', e);
-            document.getElementById('loadingIndicator').innerHTML = '⚠️ Map failed to load';
-        });
-
-    } catch (error) {
-        console.error('Failed to create map:', error);
-        document.getElementById('loadingIndicator').innerHTML = '⚠️ Failed to initialize map';
-        return;
-    }
-
-    // Add navigation controls
-    map.addControl(new mapboxgl.NavigationControl(), 'bottom-left');
-}
-
-        function setupMapLayers() {
-            // Add pole clusters
-            map.addSource('poles', {
-                type: 'geojson',
-                data: currentPoleData,
-                cluster: true,
-                clusterMaxZoom: 14,
-                clusterRadius: 50
-            });
-
-            // Cluster circles
-            map.addLayer({
-                id: 'clusters',
-                type: 'circle',
-                source: 'poles',
-                filter: ['has', 'point_count'],
-                paint: {
-                    'circle-color': '#007cbf',
-                    'circle-radius': [
-                        'step',
-                        ['get', 'point_count'],
-                        20, 10,
-                        30, 30,
-                        40
-                    ],
-                    'circle-opacity': 0.8,
-                    'circle-stroke-width': 2,
-                    'circle-stroke-color': '#ffffff'
-                }
-            });
-
-            // Cluster count labels
-            map.addLayer({
-                id: 'cluster-count',
-                type: 'symbol',
-                source: 'poles',
-                filter: ['has', 'point_count'],
-                layout: {
-                    'text-field': '{point_count_abbreviated}',
-                    'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-                    'text-size': 14
-                },
-                paint: {
-                    'text-color': '#ffffff'
-                }
-            });
-
-            // Individual pole points
-            map.addLayer({
-                id: 'unclustered-point',
-                type: 'circle',
-                source: 'poles',
-                filter: ['!', ['has', 'point_count']],
-                paint: {
-                    'circle-radius': [
-                        'interpolate',
-                        ['linear'],
-                        ['zoom'],
-                        10, 8,
-                        16, 15
-                    ],
-                    'circle-color': [
-                        'case',
-                        ['==', ['get', 'Status'], 'TRUSSED'], statusColors['TRUSSED'],
-                        ['==', ['get', 'Status'], 'REPLACED'], statusColors['REPLACED'],
-                        ['==', ['get', 'Status'], 'Restorable Reject'], statusColors['Restorable Reject'],
-                        ['==', ['get', 'Status'], 'Non Restorable Reject'], statusColors['Non Restorable Reject'],
-                        ['==', ['get', 'Status'], 'Complete'], statusColors['Complete'],
-                        statusColors['Pending']
-                    ],
-                    'circle-opacity': 0.8,
-                    'circle-stroke-width': 2,
-                    'circle-stroke-color': '#ffffff'
-                }
-            });
-
-            // Pole ID labels (visible at higher zoom levels)
-            map.addLayer({
-                id: 'pole-labels',
-                type: 'symbol',
-                source: 'poles',
-                filter: ['!', ['has', 'point_count']],
-                layout: {
-                    'text-field': ['get', 'Pole_Number'],
-                    'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-                    'text-size': 12,
-                    'text-offset': [0, 2],
-                    'text-anchor': 'top'
-                },
-                paint: {
-                    'text-color': '#333333',
-                    'text-halo-color': '#ffffff',
-                    'text-halo-width': 2
-                },
-                minzoom: 14
-            });
+            // Fall back to direct properties
+            data.poleNumber = data.poleNumber || props.Pole_Number || props.name;
+            data.length = data.length || props.Length;
+            data.class = data.class || props.Class;
+            data.yearManufactured = data.yearManufactured || props.Year_Manufactured;
+            data.status = data.status || props.Status;
+            data.link = data.link || props.URL;
+            
+            // Construct link if not available
+            if (!data.link && data.poleNumber && data.length && data.class && data.yearManufactured && data.status) {
+                const params = new URLSearchParams({
+                    'Pole_ID': data.poleNumber,
+                    'Length': data.length,
+                    'Class': data.class,
+                    'Year_Manu': data.yearManufactured,
+                    'Status': data.status
+                });
+                data.link = `${FILLOUT_FORM_BASE_URL}?${params.toString()}`;
+            }
+            
+            return data;
         }
 
-        function setupMapEvents() {
-            // Cluster click to zoom
+        // Add markers to map
+        function addMarkersToMap() {
+            // Filter out completed poles
+            const pendingPoles = allPoles.filter(pole => {
+                const poleData = extractPoleData(pole);
+                return !completedPoleIds.has(poleData.poleNumber);
+            }).map(pole => {
+                const poleData = extractPoleData(pole);
+                return {
+                    ...pole,
+                    properties: {
+                        ...pole.properties,
+                        extractedStatus: poleData.status || 'Pending'
+                    }
+                };
+            });
+
+            const geojsonData = {
+                type: 'FeatureCollection',
+                features: pendingPoles
+            };
+
+            if (map.getSource('poles')) {
+                map.getSource('poles').setData(geojsonData);
+            } else {
+                map.addSource('poles', {
+                    type: 'geojson',
+                    data: geojsonData,
+                    cluster: true,
+                    clusterMaxZoom: 14,
+                    clusterRadius: 50
+                });
+
+                // Add cluster circles
+                map.addLayer({
+                    id: 'clusters',
+                    type: 'circle',
+                    source: 'poles',
+                    filter: ['has', 'point_count'],
+                    paint: {
+                        'circle-color': [
+                            'step',
+                            ['get', 'point_count'],
+                            '#51bbd6',
+                            100,
+                            '#f1c40f',
+                            750,
+                            '#f28cb1'
+                        ],
+                        'circle-radius': [
+                            'step',
+                            ['get', 'point_count'],
+                            20,
+                            100,
+                            30,
+                            750,
+                            40
+                        ]
+                    }
+                });
+
+                // Add cluster count labels
+                map.addLayer({
+                    id: 'cluster-count',
+                    type: 'symbol',
+                    source: 'poles',
+                    filter: ['has', 'point_count'],
+                    layout: {
+                        'text-field': '{point_count_abbreviated}',
+                        'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+                        'text-size': 12
+                    }
+                });
+
+                // Add individual pole points with status-based colors
+                map.addLayer({
+                    id: 'unclustered-point',
+                    type: 'circle',
+                    source: 'poles',
+                    filter: ['!', ['has', 'point_count']],
+                    paint: {
+                        'circle-color': [
+                            'case',
+                            ['==', ['get', 'extractedStatus'], 'TRUSSED'], '#3498db',
+                            ['==', ['get', 'extractedStatus'], 'Restorable Reject'], '#f39c12',
+                            ['==', ['get', 'extractedStatus'], 'Non Restorable Reject'], '#e74c3c',
+                            ['==', ['get', 'extractedStatus'], 'REPLACED'], '#95a5a6',
+                            '#2ecc71' // Default green for pending
+                        ],
+                        'circle-radius': 8,
+                        'circle-stroke-width': 2,
+                        'circle-stroke-color': '#ffffff'
+                    }
+                });
+
+                // Add pole number labels
+                map.addLayer({
+                    id: 'pole-labels',
+                    type: 'symbol',
+                    source: 'poles',
+                    filter: ['!', ['has', 'point_count']],
+                    layout: {
+                        'text-field': ['get', 'name'],
+                        'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+                        'text-size': 16,
+                        'text-offset': [0, 2.2],
+                        'text-anchor': 'top',
+                        'text-allow-overlap': false,
+                        'text-optional': true
+                    },
+                    paint: {
+                        'text-color': '#1a1a1a',
+                        'text-halo-color': '#ffffff',
+                        'text-halo-width': 2
+                    },
+                    minzoom: 16
+                });
+            }
+
+            setupClickHandlers();
+        }
+
+        // Setup click handlers
+        function setupClickHandlers() {
             map.on('click', 'clusters', (e) => {
                 const features = map.queryRenderedFeatures(e.point, {
                     layers: ['clusters']
                 });
                 const clusterId = features[0].properties.cluster_id;
-                map.getSource('poles').getClusterExpansionZoom(clusterId, (err, zoom) => {
-                    if (err) return;
-                    map.easeTo({
-                        center: features[0].geometry.coordinates,
-                        zoom: zoom
-                    });
-                });
+                map.getSource('poles').getClusterExpansionZoom(
+                    clusterId,
+                    (err, zoom) => {
+                        if (err) return;
+                        map.easeTo({
+                            center: features[0].geometry.coordinates,
+                            zoom: zoom
+                        });
+                    }
+                );
             });
 
-            // Individual pole click
             map.on('click', 'unclustered-point', (e) => {
-                const coordinates = e.features[0].geometry.coordinates.slice();
-                const properties = e.features[0].properties;
-
-                // Create popup content
-                const popupContent = `
-                    <div class="popup-header">
-                        Pole ${properties.Pole_Number || properties.name}
-                    </div>
-                    <div class="popup-info">
-                        <div><strong>Pole Number:</strong> ${properties.Pole_Number || properties.name}</div>
-                        <div><strong>Height:</strong> ${properties.Length}ft</div>
-                        <div><strong>Class:</strong> ${properties.Class}</div>
-                        <div><strong>Year:</strong> ${properties.Year_Manufactured}</div>
-                        <div><strong>Status:</strong> ${properties.Status}</div>
-                    </div>
-                    <button class="assess-btn" onclick="openAssessmentForm('${properties.Pole_Number || properties.name}', '${properties.URL || ''}')">
-                        📋 Start Assessment
-                    </button>
-                `;
-
-                new mapboxgl.Popup()
-                    .setLngLat(coordinates)
-                    .setHTML(popupContent)
-                    .addTo(map);
+                const pole = e.features[0];
+                showPolePopup(pole, e.lngLat);
             });
 
-            // Change cursor on hover
             map.on('mouseenter', 'clusters', () => {
                 map.getCanvas().style.cursor = 'pointer';
             });
@@ -532,145 +651,249 @@ function initializeMap() {
             });
         }
 
-        // Location tracking
-        document.getElementById('locationBtn').addEventListener('click', () => {
-            if (!isTrackingLocation) {
-                startLocationTracking();
-            } else {
-                stopLocationTracking();
-            }
-        });
+        // Show pole popup with details
+        function showPolePopup(pole, coordinates) {
+            const poleData = extractPoleData(pole);
+            
+            // Store pole data globally
+            const dataKey = `poleData_${poleData.poleNumber}`;
+            window[dataKey] = {
+                name: poleData.poleNumber,
+                link: poleData.link,
+                timestamp: Date.now()
+            };
+            
+            window.currentPoleData = window[dataKey];
+            
+            const popupContent = `
+                <div class="popup-header">Pole ${poleData.poleNumber}</div>
+                <div class="popup-info">
+                    <span class="popup-label">Pole Number:</span> ${poleData.poleNumber || 'N/A'}
+                </div>
+                <div class="popup-info">
+                    <span class="popup-label">Height:</span> ${poleData.length || 'N/A'}ft
+                </div>
+                <div class="popup-info">
+                    <span class="popup-label">Class:</span> ${poleData.class || 'N/A'}
+                </div>
+                <div class="popup-info">
+                    <span class="popup-label">Year Manufactured:</span> ${poleData.yearManufactured || 'N/A'}
+                </div>
+                <div class="popup-info">
+                    <span class="popup-label">Status:</span> ${poleData.status || 'N/A'}
+                </div>
+                <button class="audit-button" onclick="startAssessmentWithId('${poleData.poleNumber}');">
+                    Start Assessment
+                </button>
+            `;
 
-        function startLocationTracking() {
-            if (!navigator.geolocation) {
-                alert('Geolocation is not supported by this browser.');
+            if (currentPopup) {
+                currentPopup.remove();
+            }
+
+            currentPopup = new mapboxgl.Popup({
+                closeOnClick: true,
+                closeButton: true
+            })
+            .setLngLat(coordinates)
+            .setHTML(popupContent)
+            .addTo(map);
+
+            currentPopup.on('close', () => {
+                currentPopup = null;
+            });
+        }
+
+        // Start assessment with pole ID
+        function startAssessmentWithId(poleId) {
+            const dataKey = `poleData_${poleId}`;
+            let poleData = window[dataKey];
+            
+            if (!poleData) {
+                poleData = window.currentPoleData;
+            }
+            
+            if (!poleData) {
+                showError('No pole data available. Please close and reopen the marker popup.');
                 return;
             }
+            
+            const assessmentLink = poleData.link;
+            
+            if (!assessmentLink || !assessmentLink.startsWith('https://form.fillout.com')) {
+                showError('Unable to generate assessment link for this pole.');
+                return;
+            }
+            
+            if (currentPopup) {
+                currentPopup.remove();
+                currentPopup = null;
+            }
+            
+            try {
+                window.open(assessmentLink, '_blank');
+            } catch (error) {
+                showError('Error opening assessment form: ' + error.message);
+            }
+        }
 
-            const locationBtn = document.getElementById('locationBtn');
-            locationBtn.classList.add('active');
-            locationBtn.innerHTML = '🎯';
-            isTrackingLocation = true;
-
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const { longitude, latitude } = position.coords;
+        // Check Google Sheets for completed assessments
+        async function checkCompletedAssessments() {
+            try {
+                const response = await fetch(GOOGLE_SHEETS_CSV_URL);
+                
+                if (!response.ok) {
+                    return;
+                }
+                
+                const csvData = await response.text();
+                const lines = csvData.split('\n');
+                
+                if (lines.length < 2) {
+                    return;
+                }
+                
+                const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                const poleIdIndex = headers.findIndex(h => 
+                    h.toLowerCase().includes('pole') && h.toLowerCase().includes('id')
+                );
+                const statusIndex = headers.findIndex(h => 
+                    h.toLowerCase().includes('status')
+                );
+                
+                if (poleIdIndex === -1 || statusIndex === -1) {
+                    return;
+                }
+                
+                const currentlyCompleted = new Set();
+                
+                for (let i = 1; i < lines.length; i++) {
+                    const row = lines[i].split(',').map(cell => cell.trim().replace(/"/g, ''));
                     
-                    if (userLocationMarker) {
-                        userLocationMarker.remove();
+                    if (row.length > Math.max(poleIdIndex, statusIndex)) {
+                        const poleId = row[poleIdIndex];
+                        const status = row[statusIndex];
+                        
+                        if (poleId && status && status.toLowerCase() === 'complete') {
+                            currentlyCompleted.add(poleId);
+                        }
                     }
-
-                    // Add user location marker
-                    const el = document.createElement('div');
-                    el.style.width = '20px';
-                    el.style.height = '20px';
-                    el.style.borderRadius = '50%';
-                    el.style.background = '#007cbf';
-                    el.style.border = '3px solid white';
-                    el.style.boxShadow = '0 0 10px rgba(0, 123, 191, 0.5)';
-
-                    userLocationMarker = new mapboxgl.Marker(el)
-                        .setLngLat([longitude, latitude])
-                        .addTo(map);
-
-                    // Zoom to user location
-                    map.flyTo({
-                        center: [longitude, latitude],
-                        zoom: 16
-                    });
-
-                    updateStatusIndicator('📍 Location found');
-                },
-                (error) => {
-                    alert('Unable to retrieve your location');
-                    stopLocationTracking();
                 }
-            );
-        }
-
-        function stopLocationTracking() {
-            const locationBtn = document.getElementById('locationBtn');
-            locationBtn.classList.remove('active');
-            locationBtn.innerHTML = '📍';
-            isTrackingLocation = false;
-
-            if (userLocationMarker) {
-                userLocationMarker.remove();
-                userLocationMarker = null;
+                
+                const newCompletions = [...currentlyCompleted].filter(pole => !completedPoleIds.has(pole));
+                const noLongerCompleted = [...completedPoleIds].filter(pole => !currentlyCompleted.has(pole));
+                
+                let mapNeedsUpdate = false;
+                
+                if (newCompletions.length > 0) {
+                    newCompletions.forEach(pole => completedPoleIds.add(pole));
+                    mapNeedsUpdate = true;
+                    showInfo(`${newCompletions.length} assessment(s) completed! Markers removed.`);
+                }
+                
+                if (noLongerCompleted.length > 0) {
+                    noLongerCompleted.forEach(pole => completedPoleIds.delete(pole));
+                    mapNeedsUpdate = true;
+                    showInfo(`${noLongerCompleted.length} pole(s) status changed. Markers restored.`);
+                }
+                
+                if (mapNeedsUpdate) {
+                    localStorage.setItem('completedPoles', JSON.stringify([...completedPoleIds]));
+                    addMarkersToMap();
+                    updateStats();
+                }
+                
+            } catch (error) {
+                console.error('Error checking completed assessments:', error);
             }
-
-            updateStatusIndicator('📡 Monitoring spreadsheet...');
         }
 
-        // Open assessment form
-        function openAssessmentForm(poleId, customUrl) {
-            // Use custom URL from KMZ if available, otherwise build URL with your parameters
-            if (customUrl && customUrl !== '') {
-                window.open(customUrl, '_blank');
-            } else {
-                // Build URL with your exact parameter structure
-                const properties = getCurrentPoleProperties(poleId);
-                const formUrl = `${CONFIG.filloutFormUrl}?Pole_ID=${encodeURIComponent(poleId)}&Length=${encodeURIComponent(properties.Length || '')}&Class=${encodeURIComponent(properties.Class || '')}&Year_Manu=${encodeURIComponent(properties.Year_Manufactured || '')}&Status=${encodeURIComponent(properties.status || 'Pending')}`;
-                window.open(formUrl, '_blank');
+        // Start periodic status checking
+        function startStatusChecking() {
+            checkCompletedAssessments();
+            
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
             }
+            
+            statusCheckInterval = setInterval(() => {
+                checkCompletedAssessments();
+            }, 30000);
         }
 
-        // Helper function to get pole properties by ID
-        function getCurrentPoleProperties(poleId) {
-            const feature = currentPoleData.features.find(f => 
-                f.properties.Pole_Number === poleId || f.properties.name === poleId
-            );
-            return feature ? feature.properties : {};
+        // Update statistics
+        function updateStats() {
+            const total = allPoles.length;
+            const completed = completedPoleIds.size;
+            const pending = total - completed;
+            
+            document.getElementById('total-poles').textContent = `Total Poles: ${total}`;
+            document.getElementById('pending-poles').textContent = `Pending: ${pending}`;
+            document.getElementById('completed-poles').textContent = `Completed: ${completed}`;
         }
 
-        // Data management
-        function loadPoleData() {
-            // Filter out poles that have been marked as "Complete" in assessments
-            // Your actual data shows various statuses, we'll keep all for now
-            // but you can modify this to hide specific statuses as needed
-            const activePoles = {
-                ...currentPoleData,
-                features: currentPoleData.features.filter(feature => 
-                    feature.properties.Status !== 'Complete'
-                )
-            };
-
-            map.getSource('poles').setData(activePoles);
-            updateStatusIndicator(`📊 ${activePoles.features.length} poles loaded for assessment`);
-        }
-
+        // Refresh data
         function refreshData() {
-            // This would fetch updated data from your Google Sheets CSV endpoint
-            // For demo purposes, randomly completing poles
-            currentPoleData.features.forEach(feature => {
-                if (Math.random() < 0.02 && feature.properties.status === 'Pending') {
-                    feature.properties.status = 'Complete';
-                }
-            });
-
+            document.getElementById('loading').style.display = 'block';
+            checkCompletedAssessments();
             loadPoleData();
         }
 
-        function startDataRefresh() {
-            setInterval(refreshData, CONFIG.refreshInterval);
-        }
-
-        function updateStatusIndicator(message) {
-            document.getElementById('statusIndicator').textContent = message;
+        // Show error message
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            errorDiv.style.backgroundColor = '#f8d7da';
+            errorDiv.style.color = '#721c24';
+            document.getElementById('loading').style.display = 'none';
+            
             setTimeout(() => {
-                document.getElementById('statusIndicator').textContent = '📡 Monitoring spreadsheet...';
-            }, 3000);
+                errorDiv.style.display = 'none';
+            }, 10000);
         }
 
-        function hideLoading() {
-            document.getElementById('loadingIndicator').style.display = 'none';
+        // Show info message
+        function showInfo(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            errorDiv.style.backgroundColor = '#d4edda';
+            errorDiv.style.color = '#155724';
+            
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
         }
 
-        // Initialize the application
-        initializeMap();
+        // Initialize when page loads
+        window.addEventListener('load', function() {
+            if (typeof mapboxgl !== 'undefined') {
+                initializeMap();
+            } else {
+                showError('Mapbox GL JS failed to load. Please check your internet connection.');
+            }
+        });
 
-        // Make functions globally available
-        window.openAssessmentForm = openAssessmentForm;
+        // Handle offline/online events
+        window.addEventListener('online', function() {
+            refreshData();
+        });
+
+        window.addEventListener('offline', function() {
+            showError('You are currently offline. Some features may not work properly.');
+        });
+
+        // Clean up intervals when page unloads
+        window.addEventListener('beforeunload', function() {
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+            }
+            
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+            }
+        });
     </script>
 </body>
 </html>
