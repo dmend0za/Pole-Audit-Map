@@ -406,7 +406,8 @@
                 bearing: 0
             });
 
-            map.on('load', () => {
+            map.on('load', async () => {
+                await loadPoleDataFromFile(); // Load data from GeoJSON file first
                 hideLoading();
                 setupMapLayers();
                 setupMapEvents();
