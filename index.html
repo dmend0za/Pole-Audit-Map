@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Utility Pole Assessment Map</title>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+
+        #map {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 1000;
+            min-width: 200px;
+        }
+
+        .legend h3 {
+            margin-bottom: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 100px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 12px 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 1000;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .location-controls {
+            position: absolute;
+            bottom: 100px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .location-btn {
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .location-btn:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: scale(1.05);
+        }
+
+        .location-btn.active {
+            background: #007cbf;
+            color: white;
+        }
+
+        .mapboxgl-popup-content {
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            max-width: 300px;
+        }
+
+        .popup-header {
+            font-weight: 600;
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 8px;
+        }
+
+        .popup-info {
+            margin-bottom: 16px;
+        }
+
+        .popup-info div {
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .popup-info strong {
+            color: #333;
+        }
+
+        .assess-btn {
+            background: linear-gradient(135deg, #007cbf, #0056b3);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .assess-btn:hover {
+            background: linear-gradient(135deg, #0056b3, #004494);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 123, 191, 0.3);
+        }
+
+        .cluster-count {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            border: 2px solid #007cbf;
+        }
+
+        @media (max-width: 768px) {
+            .legend {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                padding: 12px;
+                min-width: auto;
+            }
+
+            .status-indicator {
+                top: 80px;
+                right: 10px;
+                left: 10px;
+                text-align: center;
+            }
+
+            .location-controls {
+                bottom: 80px;
+                right: 10px;
+            }
+
+            .mapboxgl-popup-content {
+                max-width: 280px;
+                padding: 16px;
+            }
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e0e0e0;
+            border-top: 2px solid #007cbf;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <div class="legend">
+        <h3>🔌 Pole Status</h3>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #3498db;"></div>
+            <span>TRUSSED</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #f39c12;"></div>
+            <span>Restorable Reject</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #e74c3c;"></div>
+            <span>Non Restorable Reject</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #95a5a6;"></div>
+            <span>REPLACED</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #2ecc71;"></div>
+            <span>Pending Assessment</span>
+        </div>
+    </div>
+
+    <div class="status-indicator" id="statusIndicator">
+        📡 Monitoring spreadsheet...
+    </div>
+
+    <div class="location-controls">
+        <button class="location-btn" id="locationBtn" title="Find My Location">
+            📍
+        </button>
+    </div>
+
+    <div class="loading" id="loadingIndicator">
+        <div class="spinner"></div>
+        <span>Loading pole data...</span>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            mapboxToken: 'pk.eyJ1IjoiZmllbGRzZW5zZSIsImEiOiJjbWN4dW42eTcwZXJxMmxwdW41Y2JycjZ0In0.LpdOqXdOCP4TNamhlj8i-w',
+            filloutFormUrl: 'https://form.fillout.com/t/qwmp3Zdh2fus',
+            spreadsheetUrl: 'https://docs.google.com/spreadsheets/d/1KCReNtgnRafFIvnNE6XdrdgZFylxpTLJQ3wnmDNBJSg/export?format=csv',
+            refreshInterval: 30000, // 30 seconds
+            defaultCenter: [-78.6569, 35.7796], // Kenly, NC coordinates
+            defaultZoom: 12
+        };
+
+        // Sample pole data - Replace with your actual KMZ converted to GeoJSON
+        const samplePoleData = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "Pole_ID": "P001",
+                        "Length": "35",
+                        "Class": "1",
+                        "Year_Manufactured": "2018",
+                        "Structure": "Wood",
+                        "Group": "Distribution",
+                        "URL": "https://form.fillout.com/t/qwmp3Zdh2fus?Pole_ID=P001&Length=35&Class=1&Year_Manu=2018&Status=Pending",
+                        "status": "Pending"
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [-78.6569, 35.7896]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "Pole_ID": "P002",
+                        "Length": "45",
+                        "Class": "2",
+                        "Year_Manufactured": "2020",
+                        "Structure": "Steel",
+                        "Group": "Transmission",
+                        "URL": "https://form.fillout.com/t/qwmp3Zdh2fus?Pole_ID=P002&Length=45&Class=2&Year_Manu=2020&Status=Pending",
+                        "status": "Pending"
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [-78.6469, 35.7696]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "Pole_ID": "P003",
+                        "Length": "25",
+                        "Class": "3",
+                        "Year_Manufactured": "2019",
+                        "Structure": "Aluminum",
+                        "Group": "Street Light",
+                        "URL": "https://form.fillout.com/t/qwmp3Zdh2fus?Pole_ID=P003&Length=25&Class=3&Year_Manu=2019&Status=Complete",
+                        "status": "Complete"
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [-78.6669, 35.7596]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "Pole_ID": "P004",
+                        "Length": "30",
+                        "Class": "1",
+                        "Year_Manufactured": "2021",
+                        "Structure": "Fiberglass",
+                        "Group": "Communication",
+                        "URL": "https://form.fillout.com/t/qwmp3Zdh2fus?Pole_ID=P004&Length=30&Class=1&Year_Manu=2021&Status=Pending",
+                        "status": "Pending"
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [-78.6369, 35.7796]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "Pole_ID": "P005",
+                        "Length": "40",
+                        "Class": "2",
+                        "Year_Manufactured": "2017",
+                        "Structure": "Concrete",
+                        "Group": "Multi-Purpose",
+                        "URL": "https://form.fillout.com/t/qwmp3Zdh2fus?Pole_ID=P005&Length=40&Class=2&Year_Manu=2017&Status=Pending",
+                        "status": "Pending"
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [-78.6769, 35.7996]
+                    }
+                }
+            ]
+        };
+
+        // Status-based color mapping (based on your actual Status field)
+        const statusColors = {
+            'TRUSSED': '#3498db',          // Blue - needs reinforcement
+            'REPLACED': '#95a5a6',         // Gray - already handled
+            'Restorable Reject': '#f39c12', // Orange - needs restoration
+            'Non Restorable Reject': '#e74c3c', // Red - critical
+            'Pending': '#2ecc71',          // Green - pending assessment
+            'Complete': '#27ae60'          // Dark green - assessment complete
+        };
+
+        let map;
+        let userLocationMarker;
+        let isTrackingLocation = false;
+        let currentPoleData = samplePoleData;
+
+        // Initialize map
+        function initializeMap() {
+            mapboxgl.accessToken = CONFIG.mapboxToken;
+            
+            map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/mapbox/satellite-streets-v12',
+                center: CONFIG.defaultCenter,
+                zoom: CONFIG.defaultZoom,
+                pitch: 0,
+                bearing: 0
+            });
+
+            map.on('load', () => {
+                hideLoading();
+                setupMapLayers();
+                setupMapEvents();
+                loadPoleData();
+                startDataRefresh();
+            });
+
+            // Add navigation controls
+            map.addControl(new mapboxgl.NavigationControl(), 'bottom-left');
+        }
+
+        function setupMapLayers() {
+            // Add pole clusters
+            map.addSource('poles', {
+                type: 'geojson',
+                data: currentPoleData,
+                cluster: true,
+                clusterMaxZoom: 14,
+                clusterRadius: 50
+            });
+
+            // Cluster circles
+            map.addLayer({
+                id: 'clusters',
+                type: 'circle',
+                source: 'poles',
+                filter: ['has', 'point_count'],
+                paint: {
+                    'circle-color': '#007cbf',
+                    'circle-radius': [
+                        'step',
+                        ['get', 'point_count'],
+                        20, 10,
+                        30, 30,
+                        40
+                    ],
+                    'circle-opacity': 0.8,
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#ffffff'
+                }
+            });
+
+            // Cluster count labels
+            map.addLayer({
+                id: 'cluster-count',
+                type: 'symbol',
+                source: 'poles',
+                filter: ['has', 'point_count'],
+                layout: {
+                    'text-field': '{point_count_abbreviated}',
+                    'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+                    'text-size': 14
+                },
+                paint: {
+                    'text-color': '#ffffff'
+                }
+            });
+
+            // Individual pole points
+            map.addLayer({
+                id: 'unclustered-point',
+                type: 'circle',
+                source: 'poles',
+                filter: ['!', ['has', 'point_count']],
+                paint: {
+                    'circle-radius': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        10, 8,
+                        16, 15
+                    ],
+                    'circle-color': [
+                        'case',
+                        ['==', ['get', 'Status'], 'TRUSSED'], statusColors['TRUSSED'],
+                        ['==', ['get', 'Status'], 'REPLACED'], statusColors['REPLACED'],
+                        ['==', ['get', 'Status'], 'Restorable Reject'], statusColors['Restorable Reject'],
+                        ['==', ['get', 'Status'], 'Non Restorable Reject'], statusColors['Non Restorable Reject'],
+                        ['==', ['get', 'Status'], 'Complete'], statusColors['Complete'],
+                        statusColors['Pending']
+                    ],
+                    'circle-opacity': 0.8,
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#ffffff'
+                }
+            });
+
+            // Pole ID labels (visible at higher zoom levels)
+            map.addLayer({
+                id: 'pole-labels',
+                type: 'symbol',
+                source: 'poles',
+                filter: ['!', ['has', 'point_count']],
+                layout: {
+                    'text-field': ['get', 'Pole_Number'],
+                    'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+                    'text-size': 12,
+                    'text-offset': [0, 2],
+                    'text-anchor': 'top'
+                },
+                paint: {
+                    'text-color': '#333333',
+                    'text-halo-color': '#ffffff',
+                    'text-halo-width': 2
+                },
+                minzoom: 14
+            });
+        }
+
+        function setupMapEvents() {
+            // Cluster click to zoom
+            map.on('click', 'clusters', (e) => {
+                const features = map.queryRenderedFeatures(e.point, {
+                    layers: ['clusters']
+                });
+                const clusterId = features[0].properties.cluster_id;
+                map.getSource('poles').getClusterExpansionZoom(clusterId, (err, zoom) => {
+                    if (err) return;
+                    map.easeTo({
+                        center: features[0].geometry.coordinates,
+                        zoom: zoom
+                    });
+                });
+            });
+
+            // Individual pole click
+            map.on('click', 'unclustered-point', (e) => {
+                const coordinates = e.features[0].geometry.coordinates.slice();
+                const properties = e.features[0].properties;
+
+                // Create popup content
+                const popupContent = `
+                    <div class="popup-header">
+                        Pole ${properties.Pole_Number || properties.name}
+                    </div>
+                    <div class="popup-info">
+                        <div><strong>Pole Number:</strong> ${properties.Pole_Number || properties.name}</div>
+                        <div><strong>Height:</strong> ${properties.Length}ft</div>
+                        <div><strong>Class:</strong> ${properties.Class}</div>
+                        <div><strong>Year:</strong> ${properties.Year_Manufactured}</div>
+                        <div><strong>Status:</strong> ${properties.Status}</div>
+                    </div>
+                    <button class="assess-btn" onclick="openAssessmentForm('${properties.Pole_Number || properties.name}', '${properties.URL || ''}')">
+                        📋 Start Assessment
+                    </button>
+                `;
+
+                new mapboxgl.Popup()
+                    .setLngLat(coordinates)
+                    .setHTML(popupContent)
+                    .addTo(map);
+            });
+
+            // Change cursor on hover
+            map.on('mouseenter', 'clusters', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+            map.on('mouseleave', 'clusters', () => {
+                map.getCanvas().style.cursor = '';
+            });
+            map.on('mouseenter', 'unclustered-point', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+            map.on('mouseleave', 'unclustered-point', () => {
+                map.getCanvas().style.cursor = '';
+            });
+        }
+
+        // Location tracking
+        document.getElementById('locationBtn').addEventListener('click', () => {
+            if (!isTrackingLocation) {
+                startLocationTracking();
+            } else {
+                stopLocationTracking();
+            }
+        });
+
+        function startLocationTracking() {
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by this browser.');
+                return;
+            }
+
+            const locationBtn = document.getElementById('locationBtn');
+            locationBtn.classList.add('active');
+            locationBtn.innerHTML = '🎯';
+            isTrackingLocation = true;
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { longitude, latitude } = position.coords;
+                    
+                    if (userLocationMarker) {
+                        userLocationMarker.remove();
+                    }
+
+                    // Add user location marker
+                    const el = document.createElement('div');
+                    el.style.width = '20px';
+                    el.style.height = '20px';
+                    el.style.borderRadius = '50%';
+                    el.style.background = '#007cbf';
+                    el.style.border = '3px solid white';
+                    el.style.boxShadow = '0 0 10px rgba(0, 123, 191, 0.5)';
+
+                    userLocationMarker = new mapboxgl.Marker(el)
+                        .setLngLat([longitude, latitude])
+                        .addTo(map);
+
+                    // Zoom to user location
+                    map.flyTo({
+                        center: [longitude, latitude],
+                        zoom: 16
+                    });
+
+                    updateStatusIndicator('📍 Location found');
+                },
+                (error) => {
+                    alert('Unable to retrieve your location');
+                    stopLocationTracking();
+                }
+            );
+        }
+
+        function stopLocationTracking() {
+            const locationBtn = document.getElementById('locationBtn');
+            locationBtn.classList.remove('active');
+            locationBtn.innerHTML = '📍';
+            isTrackingLocation = false;
+
+            if (userLocationMarker) {
+                userLocationMarker.remove();
+                userLocationMarker = null;
+            }
+
+            updateStatusIndicator('📡 Monitoring spreadsheet...');
+        }
+
+        // Open assessment form
+        function openAssessmentForm(poleId, customUrl) {
+            // Use custom URL from KMZ if available, otherwise build URL with your parameters
+            if (customUrl && customUrl !== '') {
+                window.open(customUrl, '_blank');
+            } else {
+                // Build URL with your exact parameter structure
+                const properties = getCurrentPoleProperties(poleId);
+                const formUrl = `${CONFIG.filloutFormUrl}?Pole_ID=${encodeURIComponent(poleId)}&Length=${encodeURIComponent(properties.Length || '')}&Class=${encodeURIComponent(properties.Class || '')}&Year_Manu=${encodeURIComponent(properties.Year_Manufactured || '')}&Status=${encodeURIComponent(properties.status || 'Pending')}`;
+                window.open(formUrl, '_blank');
+            }
+        }
+
+        // Helper function to get pole properties by ID
+        function getCurrentPoleProperties(poleId) {
+            const feature = currentPoleData.features.find(f => 
+                f.properties.Pole_Number === poleId || f.properties.name === poleId
+            );
+            return feature ? feature.properties : {};
+        }
+
+        // Data management
+        function loadPoleData() {
+            // Filter out poles that have been marked as "Complete" in assessments
+            // Your actual data shows various statuses, we'll keep all for now
+            // but you can modify this to hide specific statuses as needed
+            const activePoles = {
+                ...currentPoleData,
+                features: currentPoleData.features.filter(feature => 
+                    feature.properties.Status !== 'Complete'
+                )
+            };
+
+            map.getSource('poles').setData(activePoles);
+            updateStatusIndicator(`📊 ${activePoles.features.length} poles loaded for assessment`);
+        }
+
+        function refreshData() {
+            // This would fetch updated data from your Google Sheets CSV endpoint
+            // For demo purposes, randomly completing poles
+            currentPoleData.features.forEach(feature => {
+                if (Math.random() < 0.02 && feature.properties.status === 'Pending') {
+                    feature.properties.status = 'Complete';
+                }
+            });
+
+            loadPoleData();
+        }
+
+        function startDataRefresh() {
+            setInterval(refreshData, CONFIG.refreshInterval);
+        }
+
+        function updateStatusIndicator(message) {
+            document.getElementById('statusIndicator').textContent = message;
+            setTimeout(() => {
+                document.getElementById('statusIndicator').textContent = '📡 Monitoring spreadsheet...';
+            }, 3000);
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingIndicator').style.display = 'none';
+        }
+
+        // Initialize the application
+        initializeMap();
+
+        // Make functions globally available
+        window.openAssessmentForm = openAssessmentForm;
+    </script>
+</body>
+</html>
