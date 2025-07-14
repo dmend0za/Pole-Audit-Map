@@ -445,6 +445,9 @@
                             case 'Pole_Number':
                                 data.poleNumber = value;
                                 break;
+                            case 'Length-Class':
+                                data.lengthClass = value;
+                                break;
                             case 'Length':
                                 data.length = value;
                                 break;
@@ -453,6 +456,9 @@
                                 break;
                             case 'Year_Manufactured':
                                 data.yearManufactured = value;
+                                break;
+                            case 'Year':
+                                data.year = value;
                                 break;
                             case 'Status':
                                 data.status = value;
@@ -470,9 +476,11 @@
             
             // Fall back to direct properties
             data.poleNumber = data.poleNumber || props.Pole_Number || props.name;
+            data.lengthClass = data.lengthClass || props['Length-Class'];
             data.length = data.length || props.Length;
             data.class = data.class || props.Class;
             data.yearManufactured = data.yearManufactured || props.Year_Manufactured;
+            data.year = data.year || props.Year;
             data.status = data.status || props.Status;
             data.link = data.link || props.URL;
             
@@ -655,6 +663,15 @@
         function showPolePopup(pole, coordinates) {
             const poleData = extractPoleData(pole);
             
+            // Helper function to get accuracy indicator
+            function getAccuracyIndicator(accuracyField) {
+                if (!accuracyField) return '';
+                const isActual = accuracyField.toLowerCase() === 'actual';
+                return isActual ? 
+                    '<span style="color: #28a745; font-weight: bold; margin-left: 5px;">✓</span>' : 
+                    '<span style="color: #dc3545; font-weight: bold; margin-left: 5px;">✗</span>';
+            }
+            
             // Store pole data globally
             const dataKey = `poleData_${poleData.poleNumber}`;
             window[dataKey] = {
@@ -671,13 +688,15 @@
                     <span class="popup-label">Pole Number:</span> ${poleData.poleNumber || 'N/A'}
                 </div>
                 <div class="popup-info">
-                    <span class="popup-label">Height:</span> ${poleData.length || 'N/A'}ft
+                    <span class="popup-label">Height:</span> ${poleData.length || 'N/A'}ft${getAccuracyIndicator(poleData.lengthClass)}
+                    ${poleData.lengthClass ? `<br><span style="font-size: 12px; color: #666;">Length-Class: ${poleData.lengthClass}</span>` : ''}
                 </div>
                 <div class="popup-info">
                     <span class="popup-label">Class:</span> ${poleData.class || 'N/A'}
                 </div>
                 <div class="popup-info">
-                    <span class="popup-label">Year Manufactured:</span> ${poleData.yearManufactured || 'N/A'}
+                    <span class="popup-label">Year Manufactured:</span> ${poleData.yearManufactured || 'N/A'}${getAccuracyIndicator(poleData.year)}
+                    ${poleData.year ? `<br><span style="font-size: 12px; color: #666;">Year: ${poleData.year}</span>` : ''}
                 </div>
                 <div class="popup-info">
                     <span class="popup-label">Status:</span> ${poleData.status || 'N/A'}
